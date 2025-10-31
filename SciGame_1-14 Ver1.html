@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pixel RPG UI (HTML/CSS/JS)</title>
+<style>
+  :root{
+    --bg-main: url('bg_title.png');
+    --bg-lib:  url('bg_library.png');
+    --rock-img: url('rock.png');
+
+    /* Character card previews (used only on select cards) */
+    --char1: url('char1.png');
+    --char2: url('char2.png');
+    --char3: url('char3.png');
+
+    --panel: #76533f;
+    --panel-dark: #4f2e21;
+    --ui-brown: #7d4d34;
+    --ui-brown-dark: #502e21;
+    --white: #f5f5f5;
+    --black: #0f0f0f;
+  }
+
+  @font-face { 
+    font-family: pixel; 
+    src: url(medodica.regular.woff); 
+  }
+  *{ font-family: pixel; }
+
+  html, body { 
+    height:100%; 
+    margin:0; 
+    background:#222; 
+    color:var(--white); 
+    image-rendering:pixelated;
+  }
+  
+  .stage-wrap{ 
+    display:grid; 
+    place-items:center; 
+    height:100%; 
+  }
+
+  .stage{
+    width:1200px; 
+    height:675px; 
+    position:relative; 
+    overflow:hidden;
+    border:8px solid #111; 
+    border-radius:12px; 
+    background:#333; 
+    box-shadow:0 10px 40px rgba(0,0,0,.4);
+  }
+
+  .stage::before{
+    content:""; 
+    position:absolute; 
+    inset:0; 
+    background-size:cover; 
+    background-position:center;
+    filter:brightness(var(--bg-brightness,1));
+  }
+  .stage[data-bg="title"]::before{ background-image:var(--bg-main); }
+  .stage[data-bg="library"]::before{ background-image:var(--bg-lib); }
+
+  .title{ 
+    position:absolute; 
+    top:95px; 
+    width:100%; 
+    text-align:center; 
+    font-size:250px; 
+    text-shadow:0 3px 0 #000; 
+  }
+
+  .btn{
+    position:absolute; 
+    margin-top:100px; 
+    left:50%; 
+    transform:translateX(-50%);
+    background:var(--ui-brown); 
+    border:8px solid var(--ui-brown-dark); 
+    border-radius:18px;
+    text-align:center; 
+    padding:18px 24px; 
+    width:560px; 
+    font-size:28px; 
+    cursor:default;
+  }
+  .btn.short{ margin-top:125px; width:460px; font-size:26px; }
+  .btn.focus{ box-shadow:0 0 0 6px #fff inset; }
+
+  .rock{
+    position:absolute; 
+    top:22px; 
+    left:22px; 
+    width:66px; 
+    height:54px;
+    background-image:var(--rock-img); 
+    background-size:100px; 
+    background-repeat:no-repeat; 
+    background-position:center;
+    filter:drop-shadow(0 3px 0 #000);
+  }
+  .rock.focus{ outline:6px solid #fff; outline-offset:6px; border-radius:12px; }
+
+  .controls-img{ 
+    position:absolute; 
+    right:22px; 
+    bottom:22px; 
+    width:210px; 
+    image-rendering:pixelated; 
+    filter:drop-shadow(0 3px 0 #000); 
+    user-select:none; 
+    pointer-events:none; 
+  }
+
+  .hdr{
+    position:absolute; 
+    left:49.5%; 
+    transform:translateX(-50%); 
+    top:28px; 
+    font-size:40px;
+    background:var(--ui-brown); 
+    border:6px solid var(--ui-brown-dark); 
+    padding:10px 18px; 
+    border-radius:14px;
+  }
+
+  .panel{ 
+    position:absolute; 
+    left:50%; 
+    transform:translateX(-50%); 
+    top:150px; 
+    width:760px; 
+    height:420px; 
+    background:var(--panel); 
+    border:8px solid var(--panel-dark); 
+    border-radius:18px; 
+  }
+  .panel.settings{ top:165px; height:300px; }
+
+  .slider{ 
+    position:absolute; 
+    left:50%; 
+    transform:translateX(-50%); 
+    width:640px; 
+    height:64px; 
+    background:var(--ui-brown-dark); 
+    border-radius:16px; 
+    top:var(--y); 
+    border:4px solid #000; 
+  }
+  .slider .inner{ 
+    position:absolute; left:14px; right:14px; top:14px; bottom:14px; 
+    background:#fff; border-radius:12px; 
+  }
+  .slider .knob{ 
+    position:absolute; top:-20px; width:100px; height:100px; 
+    background-image:var(--rock-img); background-size:80% 80%; 
+    background-position:center; background-repeat:no-repeat; 
+    filter:drop-shadow(0 3px 0 #000); transition:left .06s linear; 
+  }
+  .slider.focus{ box-shadow:0 0 0 6px #fff inset; }
+  .slider .label{ position:absolute; top:-35px; left:6px; font-size:30px; }
+
+  .cols{ 
+    position:absolute; inset:16px; display:grid; 
+    grid-template-columns:2fr 1fr; gap:16px; 
+  }
+  .col{ 
+    background:rgba(0,0,0,.25); border:4px solid #000; border-radius:12px; 
+    padding:2px 14px; line-height:1.35; white-space:pre-line; text-align:justify; 
+  }
+  #credits-left{ font-size:30px; }
+  .credits-foot{ position:relative; left:52.5%; transform:translateX(-50%); bottom:-464px; font-size:30px; }
+
+  .char-grid{ 
+    position:absolute; left:40%; transform:translateX(-50%); bottom:145px; 
+    display:grid; grid-template-columns:repeat(3,1fr); gap:26px; width:600px; 
+  }
+  .char-card{ 
+    position:relative; width:250px; height:360px; background:#0a0a0a; 
+    border-radius:10px; border:4px solid #111; overflow:hidden; 
+  }
+  .char-card::before{ 
+    content:""; position:absolute; inset:25px 24px 24px 24px; 
+    background-size:contain; background-repeat:no-repeat; background-position:center; 
+    filter:drop-shadow(0 6px 0 #000); 
+  }
+  .char-0::before{ background-image:var(--char1); }
+  .char-1::before{ background-image:var(--char2); }
+  .char-2::before{ background-image:var(--char3); }
+  .char-card.focus{ box-shadow:0 0 0 6px #fff inset; }
+
+  .foot-hint{ position:absolute; left:50%; transform:translateX(-50%); bottom:26px; font-size:30px; }
+
+  .name-box{
+    position:absolute; left:50%; transform:translateX(-50%); bottom:80px; 
+    width:880px; height:66px; background:var(--ui-brown); 
+    border:8px solid var(--ui-brown-dark); border-radius:20px;
+    display:grid; grid-template-columns:220px 1fr; align-items:center; padding:0 16px; 
+  }
+  .name-box .prompt{ opacity:.95; font-size:45px; }
+  .name-box .typed{ color:var(--white); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:45px; }
+
+  .page{ display:none; }
+  .page.show{ display:block; }
+
+  #page-name .char-card{ width:260px; height:360px; left:80px; bottom:25px; }
+  #page-name .char-grid{ width:300px; }
+
+  /* Fade page */
+  #page-fade .overlay{ 
+    position:absolute; inset:0; background:#000; opacity:0; 
+    animation:fadeInOut 1.2s ease-in-out forwards; 
+  }
+  @keyframes fadeInOut{ 0%{opacity:0} 30%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
+
+  /* Library scene common UI */
+  .hint-top{ 
+    position:absolute; top:16px; left:50%; transform:translateX(-50%); 
+    background:rgba(0,0,0,.45); border:4px solid #000; border-radius:10px; 
+    padding:6px 12px; font-size:28px; 
+  }
+
+  .sprite{ 
+    position:absolute; width:96px; height:128px; 
+    background-size:contain; background-repeat:no-repeat; background-position:center; 
+    image-rendering:pixelated; 
+  }
+  .plr-start{ left:90px; top:138px; }
+  .npc-jock{  left:410px; top:330px; }
+  .npc-mean{  left:820px; top:100px; }
+  .npc-nerd{  left:270px; top:400px; }
+  .npc-clown{ left:940px; top:400px; }
+
+  .dlg{
+    position:absolute; left:30px; right:30px; bottom:24px;
+    background:#fff; color:#111; border:12px solid #000; border-radius:40px;
+    padding:26px 28px 26px 290px; min-height:150px; box-shadow:0 10px 0 rgba(0,0,0,.15) inset;
+  }
+  .dlg .name{ position:absolute; left:290px; top:-30px; background:#fff; padding:6px 14px; border:6px solid #000; border-radius:12px; font-size:34px; }
+  .dlg .face{ position:absolute; left:40px; bottom:-70px; width:400px; height:400px; background-size:contain; background-repeat:no-repeat; background-position:bottom left; }
+  .dlg .nerd{ left:10px; }
+  .dlg .clown{ left:-3px; }
+  .dlg .text{ font-size:45px; line-height:1.25; }
+
+  /* Shared (movable) player element */
+  #scene-player{ width:96px; height:128px; }
+  .toast{ position:absolute; left:50%; transform:translateX(-50%); top:16px; background:rgba(0,0,0,.75); border:4px solid #000; color:#fff; padding:8px 14px; border-radius:12px; font-size:26px; display:none; }
+</style>
+</head>
+
+<body>
+<div class="stage-wrap">
+  <div class="stage" id="stage" tabindex="0" data-bg="title">
+
+    <!-- 1 TITLE -->
+    <section class="page show" id="page-title">
+      <div class="title">GAME TITLE</div>
+      <div class="btn" id="btn-start" style="top:260px;">START</div>
+      <div class="btn short" id="btn-credits" style="top:340px;">CREDITS</div>
+      <div class="rock" id="btn-settings" title="Settings"></div>
+      <img class="controls-img" src="control.png" alt="Controls: WASD + Space">
+    </section>
+
+    <!-- 2 SETTINGS -->
+    <section class="page" id="page-settings">
+      <div class="hdr">SETTINGS</div>
+      <div class="panel settings"></div>
+      <div class="slider" id="slider-vol" style="--y:230px;">
+        <div class="label">VOLUME</div>
+        <div class="inner"></div>
+        <div class="knob" style="left:20%"></div>
+      </div>
+      <div class="slider" id="slider-bri" style="--y:350px;">
+        <div class="label">BRIGHTNESS</div>
+        <div class="inner"></div>
+        <div class="knob" style="left:50%"></div>
+      </div>
+      <div class="foot-hint">W/S: SELECT SLIDER &nbsp;&nbsp; A/D: ADJUST &nbsp;&nbsp; SPACE: BACK</div>
+    </section>
+
+    <!-- 3 CREDITS -->
+    <section class="page" id="page-credits">
+      <div class="hdr">CREDITS</div>
+      <div class="panel">
+        <div class="cols">
+          <div class="col" id="credits-left">
+(Game Name) is a pixelated RPG adventure where you and your friends are transported into the world of Materials Science — exploring stress, strain, and strength through interactive challenges and retro-style gameplay inspired by Pokemon Deluge RPG.
+          </div>
+          <div class="col" id="credits-right">
+PROGRAMMER & RESEARCHERS
+  Sumampong
+  Aguanta
+  Mahusay
+
+VOICE ACTORS
+  Dabon .......... Mean Girl
+  Bungcaras ...... Jock
+  Esolana ........ Nerd
+  Rennier ........ Class Clown
+  Gines .......... Seismologist
+
+GRAPHICS
+  All Members
+          </div>
+        </div>
+        <div class="credits-foot">SUBMITTED TO: SIR SEAN POLICARPIO • PRESS SPACE TO GO BACK</div>
+      </div>
+    </section>
+
+    <!-- 4 CHARACTER SELECT -->
+    <section class="page" id="page-characters">
+      <div class="hdr">CHOOSE YOUR CHARACTER</div>
+      <div class="char-grid">
+        <div class="char-card char-0" id="char0"></div>
+        <div class="char-card char-1" id="char1"></div>
+        <div class="char-card char-2" id="char2"></div>
+      </div>
+      <div class="foot-hint">A/D: SWITCH &nbsp;&nbsp; SPACE: ENTER</div>
+    </section>
+
+    <!-- 5 NAME -->
+    <section class="page" id="page-name">
+      <div class="hdr">CHOOSE YOUR CHARACTER</div>
+      <div class="char-grid" style="grid-template-columns:1fr; width:200px;">
+        <div class="char-card char-0" id="chosen-solo"></div>
+      </div>
+      <div class="name-box">
+        <div class="prompt">ENTER NAME:</div>
+        <div class="typed" id="typed-name"></div>
+      </div>
+      <div class="foot-hint">PRESS SPACE TO ENTER</div>
+    </section>
+
+    <!-- 6 FADE -->
+    <section class="page" id="page-fade">
+      <div class="overlay"></div>
+    </section>
+
+    <!-- 7 LIBRARY SETUP (no player placeholder here!) -->
+    <section class="page" id="page-lib-setup">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('right_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+    </section>
+
+    <!-- 8–12 DIALOGUE PAGES (also no player placeholder) -->
+    <section class="page" id="page-dlg-8">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('right_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_jock.png')"></div>
+        <div class="name">JOCK</div>
+        <div class="text">Ugh! Why do we have to do this project about stress and strain anyway?! Mag ML nalang ta oi.</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-9">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('right_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('right_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_mean.png')"></div>
+        <div class="name">MEAN GIRL</div>
+        <div class="text">Oh please, you act as if you’re even doing something.</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-10">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('left_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face nerd" style="background-image:url('dialogue_nerd.png')"></div>
+        <div class="name">NERD</div>
+        <div class="text" style="font-size:34px;">Well, we can’t just ChatGPT everything. We actually have to find books. I mean, these things are so ancient, they probably still think the Earth is flat!</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-11">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face clown" style="background-image:url('dialogue_clown.png')"></div>
+        <div class="name">CLASS CLOWN</div>
+        <div class="text">Hey, if we find the right one, maybe it’ll have a map to buried treasure or something.</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-12">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_mean.png')"></div>
+        <div class="name">MEAN GIRL</div>
+        <div class="text">Ugh! Let’s wrap this up so I can get back to my actual hobbies… Check the shelves.</div>
+      </div>
+    </section>
+
+    <!-- 13 LIBRARY PLAY -->
+    <section class="page" id="page-lib-play">
+      <div class="toast" id="toast">No books about stress and strain here.</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <!-- Player appears here via #scene-player -->
+    </section>
+
+    <!-- 14 PLAYER DIALOGUE -->
+    <section class="page" id="page-dlg-14">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('npc_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('npc_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('npc_clown.png')"></div>
+      <div class="dlg">
+        <div class="face" id="dlg-face-char"></div>
+        <div class="name" id="dlg-name-char">CHARACTER NAME</div>
+        <div class="text">Ooh, I found a book guys!</div>
+      </div>
+    </section>
+
+    <!-- ✅ One shared player sprite that we move between pages -->
+    <div class="sprite plr-start" id="scene-player" style="display:none;"></div>
+
+  </div>
+</div>
+
+<script>
+/* ====== STATE IDS ====== */
+const STATES = {
+  TITLE:"page-title", SETTINGS:"page-settings", CREDITS:"page-credits",
+  CHAR:"page-characters", NAME:"page-name",
+  FADE:"page-fade",
+  LIB_SETUP:"page-lib-setup",
+  DLG8:"page-dlg-8", DLG9:"page-dlg-9", DLG10:"page-dlg-10", DLG11:"page-dlg-11", DLG12:"page-dlg-12",
+  PLAY:"page-lib-play",
+  DLG14:"page-dlg-14"
+};
+
+const stage = document.getElementById("stage");
+stage.focus();
+
+/* ====== PAGE SWITCHER ====== */
+function showPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("show"));
+  document.getElementById(id).classList.add("show");
+
+  const isLibrary = new Set([
+    STATES.LIB_SETUP, STATES.DLG8, STATES.DLG9, STATES.DLG10, STATES.DLG11, STATES.DLG12, STATES.PLAY, STATES.DLG14
+  ]).has(id);
+  stage.dataset.bg = isLibrary ? "library" : "title";
+
+  // Move the single player sprite into any library page
+  const plr = document.getElementById("scene-player");
+  if (isLibrary){
+    document.getElementById(id).appendChild(plr);
+    plr.style.display = "block";
+    if (id !== STATES.PLAY) setPlayerFrame('stand');
+  } else {
+    plr.style.display = "none";
+  }
+}
+
+/* ====== UI FOCUS HELPERS ====== */
+function setBtnFocus(i){ startBtn.classList.toggle("focus", i===0); creditsBtn.classList.toggle("focus", i===1); settingsRock.classList.toggle("focus", i===2); }
+function setSliderFocus(i){ volSlider.classList.toggle("focus", i===0); briSlider.classList.toggle("focus", i===1); }
+function setCharFocus(i){ [char0,char1,char2].forEach((el,idx)=>el.classList.toggle("focus", idx===i)); }
+
+/* ====== ELEMENTS ====== */
+const startBtn = document.getElementById("btn-start");
+const creditsBtn = document.getElementById("btn-credits");
+const settingsRock = document.getElementById("btn-settings");
+const volSlider = document.getElementById("slider-vol");
+const briSlider = document.getElementById("slider-bri");
+const char0 = document.getElementById("char0");
+const char1 = document.getElementById("char1");
+const char2 = document.getElementById("char2");
+const chosenSolo = document.getElementById("chosen-solo");
+const typedNameEl = document.getElementById("typed-name");
+const dlgFaceChar = document.getElementById("dlg-face-char");
+const dlgNameChar = document.getElementById("dlg-name-char");
+const scenePlayer = document.getElementById("scene-player");
+const toast = document.getElementById("toast");
+
+/* ====== STATE ====== */
+let current = STATES.TITLE;
+let titleFocus = 0, settingsFocus = 0;
+let vol = 0.2, bri = 0.4;
+let charIndex = 0;  // 0,1,2
+let typed = "";
+
+/* ====== INIT ====== */
+setBtnFocus(titleFocus); 
+setSliderFocus(settingsFocus); 
+setCharFocus(charIndex);
+
+updateSliders();
+function updateSliders(){
+  function setKnob(slider, value){
+    const inner = slider.querySelector(".inner");
+    const knob  = slider.querySelector(".knob");
+    const innerWidth = inner.getBoundingClientRect().width;
+    const leftPx = inner.offsetLeft + value*(innerWidth-60);
+    knob.style.left = `${Math.max(0, Math.min(slider.clientWidth-60, leftPx))}px`;
+  }
+  setKnob(volSlider, vol); 
+  setKnob(briSlider, bri);
+  document.documentElement.style.setProperty("--bg-brightness", (0.6 + bri*0.8).toFixed(2));
+}
+
+function reflectChosen(){ 
+  chosenSolo.className = "char-card char-" + charIndex; 
+}
+
+/* ====== PLAYER ART HELPERS ====== */
+function framesBase(idx){ return ['char1','char2','char3'][idx] || 'char1'; }
+
+function setPlayerFrame(dir){
+  // dir: 'up'|'down'|'left'|'right'|'stand'
+  const base = framesBase(charIndex);
+  const file = {
+    up:    `${base}_back.png`,
+    down:  `${base}_front.png`,
+    left:  `${base}_left.png`,
+    right: `${base}_right.png`,
+    stand: `${base}_stand.png`,
+  }[dir] || `${base}_stand.png`;
+  scenePlayer.style.backgroundImage = `url('${file}')`;
+}
+
+/* ====== FREE MOVE ====== */
+let px=90, py=138;         // spawn
+let held = {a:false,d:false,w:false,s:false};
+const speed = 3;
+
+function rect(x,y,w,h){ return {x,y,w,h}; }
+function overlap(a,b){ return !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y); }
+
+const obstacles = [
+  rect(60,90,1080,30), rect(60,620,1080,20), rect(60,90,30,550), rect(1110,90,30,550),
+  rect(240,260,240,110), rect(520,260,240,110), rect(800,260,240,110),
+  rect(240,480,240,110), rect(800,480,240,110),
+];
+const shelves = [
+  rect(180,140,140,60), rect(470,140,140,60), rect(740,140,140,60), rect(1010,140,140,60),
+  rect(590,420,160,80) // special -> slide 14
+];
+
+function moveLoop(){
+  if (current!==STATES.PLAY) return;
+
+  const vx = (held.d?1:0) - (held.a?1:0);
+  const vy = (held.s?1:0) - (held.w?1:0);
+
+  let nx = px + vx*speed;
+  let ny = py + vy*speed;
+
+  const plrBox = (x,y)=>rect(x, y, 60, 90);
+
+  let tryX = plrBox(nx, py);
+  if (obstacles.some(o=>overlap(o, tryX)) || shelves.some(s=>overlap(s, tryX))) nx = px;
+  let tryY = plrBox(px, ny);
+  if (obstacles.some(o=>overlap(o, tryY)) || shelves.some(s=>overlap(s, tryY))) ny = py;
+
+  px = nx; py = ny;
+  scenePlayer.style.left = px + "px";
+  scenePlayer.style.top  = py + "px";
+
+  requestAnimationFrame(moveLoop);
+}
+
+/* ====== KEYBOARD ====== */
+window.addEventListener("keydown", (e)=>{
+  if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
+  const key = e.key.toLowerCase();
+
+  if (current === STATES.NAME){
+    if (key === " "){
+      current = STATES.FADE; 
+      showPage(current);
+
+      // Prepare player art based on chosen character
+      setPlayerFrame('stand');
+      document.getElementById("dlg-face-char").style.backgroundImage = `url('dialogue_char${charIndex+1}.png')`;
+      document.getElementById("dlg-name-char").textContent = (typed || "CHARACTER").toUpperCase();
+
+      // After fade, go to library setup and place player
+      setTimeout(()=>{
+        current = STATES.LIB_SETUP; 
+        showPage(current);
+        // spawn point
+        scenePlayer.classList.add('plr-start'); 
+        px=90; py=138; 
+        scenePlayer.style.left = px + "px"; 
+        scenePlayer.style.top  = py + "px";
+      }, 1200);
+      return;
+    }
+    if (key === "backspace"){ typed = typed.slice(0,-1); typedNameEl.textContent = typed; return; }
+    if (e.key.length===1 && typed.length<16){ typed += e.key; typedNameEl.textContent = typed; }
+    return;
+  }
+
+  // WASD movement only on PLAY page
+  if (current === STATES.PLAY){
+    if (key==='a'){ held.a=true; setPlayerFrame('left'); }
+    if (key==='d'){ held.d=true; setPlayerFrame('right'); }
+    if (key==='w'){ held.w=true; setPlayerFrame('up'); }
+    if (key==='s'){ held.s=true; setPlayerFrame('down'); }
+    if (key===' '){
+      // Interact with shelves
+      const near = shelves.find(s=>{
+        const cx = px+30, cy=py+45;
+        const dx = Math.max(s.x - cx, 0, cx - (s.x + s.w));
+        const dy = Math.max(s.y - cy, 0, cy - (s.y + s.h));
+        return Math.hypot(dx, dy) < 40;
+      });
+      if (near){
+        if (near===shelves[4]){
+          current = STATES.DLG14; 
+          showPage(current); 
+          setPlayerFrame('stand');
+        } else {
+          toast.textContent="No books about stress and strain here.";
+          toast.style.display="block";
+          setTimeout(()=>toast.style.display="none", 900);
+        }
+      }
+    }
+    return;
+  }
+
+  switch (current){
+    case STATES.TITLE:{
+      if (["a","w"].includes(key)) { titleFocus=(titleFocus+2)%3; setBtnFocus(titleFocus); }
+      if (["d","s"].includes(key)) { titleFocus=(titleFocus+1)%3; setBtnFocus(titleFocus); }
+      if (key===" "){
+        if (titleFocus===0){ current=STATES.CHAR; showPage(current); }
+        else if (titleFocus===1){ current=STATES.CREDITS; showPage(current); }
+        else { current=STATES.SETTINGS; showPage(current); }
+      }
+    } break;
+
+    case STATES.SETTINGS:{
+      if (key==="w"||key==="s"){ settingsFocus=(settingsFocus+1)%2; setSliderFocus(settingsFocus); }
+      if (key==="a"){ if (settingsFocus===0) vol=Math.max(0,vol-0.05); else bri=Math.max(0,bri-0.05); updateSliders(); }
+      if (key==="d"){ if (settingsFocus===0) vol=Math.min(1,vol+0.05); else bri=Math.min(1,bri+0.05); updateSliders(); }
+      if (key===" "){ current=STATES.TITLE; showPage(current); setBtnFocus(titleFocus); }
+    } break;
+
+    case STATES.CREDITS:{ 
+      if (key===" "){ current=STATES.TITLE; showPage(current); setBtnFocus(titleFocus); } 
+    } break;
+
+    case STATES.CHAR:{
+      if (key==="a"){ charIndex=(charIndex+2)%3; setCharFocus(charIndex); }
+      if (key==="d"){ charIndex=(charIndex+1)%3; setCharFocus(charIndex); }
+      if (key===" "){ reflectChosen(); typed=""; typedNameEl.textContent=typed; current=STATES.NAME; showPage(current); }
+    } break;
+
+    case STATES.LIB_SETUP:{ if (key===" "){ current=STATES.DLG8;  showPage(current); } } break;
+    case STATES.DLG8:{      if (key===" "){ current=STATES.DLG9;  showPage(current); } } break;
+    case STATES.DLG9:{      if (key===" "){ current=STATES.DLG10; showPage(current); } } break;
+    case STATES.DLG10:{     if (key===" "){ current=STATES.DLG11; showPage(current); } } break;
+    case STATES.DLG11:{     if (key===" "){ current=STATES.DLG12; showPage(current); } } break;
+
+    case STATES.DLG12:{ 
+      if (key===" "){
+        current=STATES.PLAY; 
+        showPage(current);
+        // spawn player and start loop
+        px=90; py=138; 
+        scenePlayer.style.left=px+"px"; 
+        scenePlayer.style.top=py+"px";
+        setPlayerFrame('stand'); 
+        held={a:false,d:false,w:false,s:false};
+        requestAnimationFrame(moveLoop);
+      }
+    } break;
+
+    case STATES.DLG14:{ 
+      // Hook up next scene here if needed after player finds the book
+    } break;
+  }
+});
+
+window.addEventListener("keyup",(e)=>{
+  const k=e.key.toLowerCase();
+  if (k==='a') held.a=false;
+  if (k==='d') held.d=false;
+  if (k==='w') held.w=false;
+  if (k==='s') held.s=false;
+  if (!held.a && !held.d && !held.w && !held.s) setPlayerFrame('stand');
+});
+
+/* Keep keyboard focus on stage */
+stage.addEventListener("blur", ()=> stage.focus());
+</script>
+</body>
+</html>
